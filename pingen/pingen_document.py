@@ -119,27 +119,31 @@ class PingenDocument(models.Model):
         instance) for public interface.
         """
         self.ensure_one()
-        for document in self:
-            try:
-                session = self._get_pingen_session()
-                document._push_to_pingen(pingen=session)
-            except ConnectionError as e:
-                raise UserError(
-                    _('Connection Error when asking for ' +
-                      'sending the document %s to Pingen')
-                    % document.name)
-            except APIError as e:
-                raise UserError(
-                    _('Error when asking Pingen to send the document %s: '
-                      '\n%s') % (document.name, e))
-            except Exception as e:
-                _logger.exception(
-                    'Unexcepted Error when updating ' +
-                    'the status of pingen.document %s: ' %
-                    document.id)
-                raise UserError(
-                    _('Unexcepted Error when updating the ' +
-                      'status of Document %s') % document.name)
+
+        try:
+            session = self._get_pingen_session()
+            self._push_to_pingen(pingen=session)
+        except ConnectionError as e:
+            self.write({'last_error_message': e,
+                        'state': 'error'})
+            raise UserError(
+                _('Connection Error when asking for ' +
+                  'sending the document %s to Pingen')
+                % self.name)
+        except APIError as e:
+            self.write({'last_error_message': e,
+                        'state': 'pingen_error'})
+            raise UserError(
+                _('Error when asking Pingen to send the document %s: '
+                  '\n%s') % (self.name, e))
+        except Exception as e:
+            _logger.exception(
+                'Unexcepted Error when updating ' +
+                'the status of pingen.document %s: ' %
+                self.id)
+            raise UserError(
+                _('Unexcepted Error when updating the ' +
+                  'status of Document %s') % self.name)
         return True
 
     def _push_and_send_to_pingen_cron(self):
@@ -232,28 +236,27 @@ class PingenDocument(models.Model):
         instance) for public interface.
         """
         self.ensure_one()
-        for document in self:
-            try:
-                session = document._get_pingen_session()
-                document._ask_pingen_send(pingen=session)
-            except ConnectionError as e:
-                raise UserError(
-                    _('Connection Error when asking for '
-                      'sending the document %s to Pingen') % document.name)
+        try:
+            session = self._get_pingen_session()
+            self._ask_pingen_send(pingen=session)
+        except ConnectionError as e:
+            raise UserError(
+                _('Connection Error when asking for '
+                  'sending the document %s to Pingen') % self.name)
 
-            except APIError as e:
-                raise UserError(
-                    _('Error when asking Pingen to send the document %s: '
-                      '\n%s') % (document.name, e))
+        except APIError as e:
+            raise UserError(
+                _('Error when asking Pingen to send the document %s: '
+                  '\n%s') % (self.name, e))
 
-            except BaseException as e:
-                _logger.exception(
-                    'Unexcepted Error when updating the ' +
-                    'status of pingen.document %s: ' %
-                    document.id)
-                raise UserError(
-                    _('Unexcepted Error when updating the ' +
-                      'status of Document %s') % document.name)
+        except BaseException as e:
+            _logger.exception(
+                'Unexcepted Error when updating the ' +
+                'status of pingen.document %s: ' %
+                self.id)
+            raise UserError(
+                _('Unexcepted Error when updating the ' +
+                  'status of Document %s') % self.name)
         return True
 
     def _update_post_infos(self, pingen):

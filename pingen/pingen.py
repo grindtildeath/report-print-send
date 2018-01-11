@@ -117,11 +117,6 @@ class Pingen(object):
 
         response = method(complete_url, **kwargs)
 
-        if not response.ok:
-            raise ConnectionError(
-                "%s: %s" % (response.json()['errorcode'],
-                            response.json()['errormessage']))
-
         if response.json()['error']:
             raise APIError(
                 "%s: %s" % (response.json()['errorcode'],
